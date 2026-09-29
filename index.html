@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GENITUS DIVIDEND DEEP</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root{--bg:#f4f7fb;--surface:#ffffff;--panel:#ffffff;--border:#d9e2ec;--accent:#0e7490;--gold:#b45309;--green:#15803d;--red:#b91c1c;--muted:#52606d;--text:#1e293b;--bright:#0f172a;--mono:'Space Mono',monospace;--sans:'Rajdhani',sans-serif;}
+    :root.dark-theme{--bg:#080c10;--surface:#0d1117;--panel:#111820;--border:#1e2d3d;--accent:#00d4ff;--gold:#f0c040;--green:#00ff88;--red:#ff3b5c;--muted:#7d92a8;--text:#c8d8e8;--bright:#ffffff;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;min-height:100vh;transition:background .25s,color .25s;}
+
+    header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:200;}
+    .logo{display:flex;align-items:center;gap:12px;}
+    .logo-mark{width:32px;height:32px;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:15px;color:var(--gold);}
+    .logo-text{font-family:var(--mono);font-size:13px;letter-spacing:3px;color:var(--bright);}
+    .logo-sub{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--muted);display:block;margin-top:1px;}
+    #themeToggleBtn{background:none;border:1px solid var(--border);color:var(--accent);width:30px;height:30px;border-radius:2px;cursor:pointer;font-size:14px;}
+
+    .tabs{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--surface);padding:0 20px;}
+    .tab{font-family:var(--mono);font-size:11px;letter-spacing:2px;padding:12px 18px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;text-transform:uppercase;}
+    .tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+
+    .section{display:none;padding:18px;max-width:1200px;margin:0 auto;}
+    .section.active{display:block;}
+
+    .field-label{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;display:block;}
+    select,input[type="text"],input[type="number"]{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:8px 10px;outline:none;border-radius:2px;}
+    select:focus,input:focus{border-color:var(--accent);}
+    .btn{font-family:var(--mono);font-size:11px;letter-spacing:1px;padding:8px 12px;border:1px solid var(--gold);background:transparent;color:var(--gold);cursor:pointer;border-radius:2px;text-transform:uppercase;}
+    .btn:hover{background:var(--gold);color:var(--bg);}
+    .btn-red{border-color:var(--red);color:var(--red);}
+    .btn-red:hover{background:var(--red);color:var(--bg);}
+
+    .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;}
+    .picker-list{max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:2px;background:var(--surface);}
+    .picker-item{padding:7px 10px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px;display:flex;justify-content:space-between;}
+    .picker-item:hover{background:rgba(180,83,9,0.08);}
+    .picker-item .sym{font-family:var(--mono);color:var(--accent);font-weight:700;}
+
+    .panel-block{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:14px;margin-bottom:16px;}
+    .panel-block h3{font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:10px;}
+    .panel-block p.note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6;}
+    .chart-wrap{height:260px;position:relative;}
+
+    table{width:100%;border-collapse:collapse;font-size:12px;}
+    th{font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);}
+    td{padding:6px 8px;border-bottom:1px solid rgba(125,146,168,0.15);}
+    .wl-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:2px;margin-bottom:6px;background:var(--surface);}
+    .wl-row .sym{font-family:var(--mono);color:var(--accent);font-weight:700;min-width:110px;}
+    .wl-row input{width:70px;}
+    .wl-empty{padding:20px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:11px;}
+
+    .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
+    @media(max-width:600px){.stat-grid{grid-template-columns:repeat(2,1fr);}}
+    .stat-box{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:10px;}
+    .stat-box .lbl{font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:5px;}
+    .stat-box .val{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--bright);}
+    .stat-box .val.up{color:var(--green);}
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">Ω</div>
+    <div><span class="logo-text">GENITUS</span><span class="logo-sub">DIVIDEND DEEP</span></div>
+  </div>
+  <button id="themeToggleBtn" title="Toggle theme">🌙</button>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="portfolio" onclick="switchTab('portfolio')">A · Portfolio &amp; Seasonality</div>
+  <div class="tab" data-tab="single" onclick="switchTab('single')">B · Single-Stock Deep Dive</div>
+</div>
+
+<!-- SECTION A -->
+<div class="section active" id="section-portfolio">
+  <div class="panel-block">
+    <h3>Build Your Watchlist</h3>
+    <div class="row">
+      <div><span class="field-label">Exchange</span><select id="exSelectA" onchange="onExchangeChangeA()"></select></div>
+      <div><span class="field-label">Search</span><input type="text" id="searchA" oninput="renderPickerA()" placeholder="Symbol or name..."></div>
+    </div>
+    <div class="picker-list" id="pickerListA"></div>
+  </div>
+
+  <div class="panel-block">
+    <h3>Watchlist — Set Allocation Weight per Position</h3>
+    <div id="watchlistRows"><div class="wl-empty">Add symbols above to build a watchlist.</div></div>
+    <div class="row" style="margin-top:10px"><button class="btn" onclick="computePortfolio()">CALCULATE PORTFOLIO</button></div>
+  </div>
+
+  <div class="panel-block" id="portfolioResult" style="display:none">
+    <h3>Portfolio-Yield-Aggregator</h3>
+    <div class="stat-grid" id="portfolioStats"></div>
+    <p class="note">Weighted yield = Σ(weight × trailing yield) ÷ Σ(weight). Weights are relative — enter e.g. 50/30/20 or just 1/1/1 for equal-weight; they get normalized automatically.</p>
+  </div>
+
+  <div class="panel-block" id="seasonalityResult" style="display:none">
+    <h3>Saisonalitäts-Muster (Quartals-Cluster über die ganze Watchlist)</h3>
+    <div class="chart-wrap"><canvas id="seasonChart"></canvas></div>
+    <p class="note">Für jede historische Zahlung wird ihr Anteil an der jährlichen Gesamtausschüttung DERSELBEN Aktie berechnet (currency-neutral, da es ein Verhältnis innerhalb derselben Aktie/Währung ist), dann über alle Watchlist-Positionen und Jahre pro Kalendermonat gemittelt. Zeigt, wann im Jahr strukturell am meisten deiner Dividenden ankommen — unabhängig davon, dass die Positionen in unterschiedlichen Währungen zahlen.</p>
+  </div>
+</div>
+
+<!-- SECTION B -->
+<div class="section" id="section-single">
+  <div class="panel-block">
+    <h3>Pick a Stock</h3>
+    <div class="row">
+      <div><span class="field-label">Exchange</span><select id="exSelectB" onchange="onExchangeChangeB()"></select></div>
+      <div><span class="field-label">Search</span><input type="text" id="searchB" oninput="renderPickerB()" placeholder="Symbol or name..."></div>
+    </div>
+    <div class="picker-list" id="pickerListB"></div>
+  </div>
+
+  <div id="singleResult"></div>
+</div>
+
+<script>
+  const SUMMARY_URL = 'https://raw.githubusercontent.com/Babybounce500/genitus-ticker-cache/main/dividend-summary.csv';
+  const HISTORY_URL = 'https://raw.githubusercontent.com/Babybounce500/genitus-ticker-cache/main/dividend-history.csv';
+
+  (function(){
+    const KEY='genitusTheme:divdeep';
+    function applyTheme(t){
+      document.documentElement.classList.toggle('dark-theme', t==='dark');
+      localStorage.setItem(KEY,t);
+      const btn=document.getElementById('themeToggleBtn');
+      if(btn) btn.textContent = t==='dark' ? '☀' : '🌙';
+    }
+    window.__theme = localStorage.getItem(KEY) || 'light';
+    applyTheme(window.__theme);
+    document.addEventListener('DOMContentLoaded', function(){
+      const btn=document.getElementById('themeToggleBtn');
+      if(btn) btn.addEventListener('click', function(){
+        window.__theme = window.__theme==='dark' ? 'light' : 'dark';
+        applyTheme(window.__theme);
+      });
+    });
+  })();
+
+  function switchTab(name){
+    document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    document.getElementById('section-'+name).classList.add('active');
+  }
+
+  function parseCSVLine(line){
+    const out=[]; let cur=''; let inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(inQ){ if(c==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else inQ=false; } else cur+=c; }
+      else { if(c===','){ out.push(cur); cur=''; } else if(c==='"'){ inQ=true; } else cur+=c; }
+    }
+    out.push(cur); return out;
+  }
+
+  let summaryByExchange = new Map();
+  let historyBySymbol = new Map();
+  let cacheReady = null;
+
+  function loadCache(){
+    if(cacheReady) return cacheReady;
+    cacheReady = Promise.all([
+      fetch(SUMMARY_URL).then(r=>r.text()),
+      fetch(HISTORY_URL).then(r=>r.text())
+    ]).then(([sText,hText])=>{
+      const sLines = sText.split('\n').filter(Boolean);
+      for(let i=1;i<sLines.length;i++){
+        const [fullSymbol,name,type,ex,count,streakYears,streakDir,yieldPct,price,lastDate,lastAmount,lastCurrency] = parseCSVLine(sLines[i]);
+        if(!fullSymbol||!ex) continue;
+        if(!summaryByExchange.has(ex)) summaryByExchange.set(ex, []);
+        summaryByExchange.get(ex).push({
+          fullSymbol, name:(name||'').trim(), type, ex,
+          count: parseInt(count)||0, streakYears: parseInt(streakYears)||1, streakDir: streakDir||'new',
+          yieldPct: parseFloat(yieldPct)||0, price: price?parseFloat(price):null,
+          lastDate: lastDate||'', lastAmount: parseFloat(lastAmount)||0, lastCurrency: lastCurrency||''
+        });
+      }
+      const hLines = hText.split('\n').filter(Boolean);
+      for(let i=1;i<hLines.length;i++){
+        const [fullSymbol,date,amount,currency,price,pct] = parseCSVLine(hLines[i]);
+        if(!fullSymbol) continue;
+        if(!historyBySymbol.has(fullSymbol)) historyBySymbol.set(fullSymbol, []);
+        historyBySymbol.get(fullSymbol).push({ date, value:parseFloat(amount)||0, currency:currency||'', price: price?parseFloat(price):null, pctOfPrice: pct?parseFloat(pct):null });
+      }
+    }).catch(e=>console.warn('Cache load failed:', e.message));
+    return cacheReady;
+  }
+
+  const EXCHANGES = [
+    {g:'🇺🇸 United States',opts:['US','NYSE','NASDAQ','AMEX','PINK','OTCQB','OTCQX','BATS']},
+    {g:'🇨🇦 Canada',opts:['TO','V','NEO']},
+    {g:'🌎 Latin America',opts:['MX','SA','BA','SN','LIM']},
+    {g:'🇬🇧 United Kingdom',opts:['LSE','IL']},
+    {g:'🇩🇪 Germany',opts:['XETRA','F','STU','DU','BE','MU','HM','HA']},
+    {g:'🇱🇺 Luxembourg',opts:['LU']}, {g:'🇮🇪 Ireland',opts:['IR']},
+    {g:'🇫🇷 France',opts:['PA']}, {g:'🇳🇱 Netherlands',opts:['AS']}, {g:'🇧🇪 Belgium',opts:['BR']},
+    {g:'🇵🇹 Portugal',opts:['LS']}, {g:'🇨🇭 Switzerland',opts:['SW']}, {g:'🇪🇸 Spain',opts:['MC']},
+    {g:'🇦🇹 Austria',opts:['VI']}, {g:'🇬🇷 Greece',opts:['AT']},
+    {g:'🇸🇪 Scandinavia',opts:['ST','OL','CO','HE']},
+    {g:'🇵🇱 Eastern Europe',opts:['WAR','PR','BUD','RO','ZSE']},
+    {g:'🇷🇺 Russia',opts:['MCX']}, {g:'🇹🇷 Turkey',opts:['IS']}, {g:'🇮🇱 Israel',opts:['TA']},
+    {g:'🇿🇦 Africa',opts:['JSE','EGX','BC','XNAI','XZIM','XBOT','LUSE','GSE','USE','RSE','DSE','SEM','MSE','XNSA']},
+    {g:'🇭🇰 Hong Kong',opts:['HK']}, {g:'🇨🇳 China',opts:['SHG','SHE']},
+    {g:'🇰🇷 Korea',opts:['KO','KQ']}, {g:'🇮🇳 India',opts:['NSE']}, {g:'🇵🇰 Pakistan',opts:['KAR']},
+    {g:'🇱🇰 Sri Lanka',opts:['CM']},
+    {g:'🇸🇬 Southeast Asia',opts:['KLSE','BK','JK','VN','PSE']},
+    {g:'🇹🇼 Taiwan',opts:['TW','TWO']}, {g:'🇦🇺 Australia',opts:['AU']},
+  ];
+  function buildExchangeSelect(id){
+    document.getElementById(id).innerHTML = '<option value="">— Select Market —</option>' +
+      EXCHANGES.map(g=>`<optgroup label="${g.g}">${g.opts.map(o=>`<option value="${o}">${o}</option>`).join('')}</optgroup>`).join('');
+  }
+
+  // ── SECTION A: WATCHLIST ──
+  let currentListA = [];
+  let watchlist = []; // {fullSymbol,name,yieldPct,weight}
+
+  async function onExchangeChangeA(){
+    const ex = document.getElementById('exSelectA').value;
+    document.getElementById('searchA').value='';
+    if(!ex){ currentListA=[]; renderPickerA(); return; }
+    await loadCache();
+    currentListA = (summaryByExchange.get(ex)||[]).slice().sort((a,b)=>b.yieldPct-a.yieldPct);
+    renderPickerA();
+  }
+  function renderPickerA(){
+    const q = document.getElementById('searchA').value.toLowerCase().trim();
+    const list = document.getElementById('pickerListA');
+    const rows = currentListA.filter(r=>!q || r.fullSymbol.toLowerCase().includes(q) || r.name.toLowerCase().includes(q)).slice(0,200);
+    list.innerHTML = rows.length ? rows.map(r=>`<div class="picker-item" onclick='addToWatchlist(${JSON.stringify(r).replace(/'/g,"&apos;")})'><span class="sym">${r.fullSymbol}</span><span>${r.yieldPct.toFixed(2)}% — ${r.name}</span></div>`).join('') : '<div class="wl-empty">No matches.</div>';
+  }
+  function addToWatchlist(r){
+    if(watchlist.find(w=>w.fullSymbol===r.fullSymbol)) return;
+    watchlist.push({ fullSymbol:r.fullSymbol, name:r.name, yieldPct:r.yieldPct, weight:1 });
+    renderWatchlist();
+  }
+  function removeFromWatchlist(sym){
+    watchlist = watchlist.filter(w=>w.fullSymbol!==sym);
+    renderWatchlist();
+  }
+  function renderWatchlist(){
+    const c = document.getElementById('watchlistRows');
+    if(!watchlist.length){ c.innerHTML = '<div class="wl-empty">Add symbols above to build a watchlist.</div>'; return; }
+    c.innerHTML = watchlist.map(w=>`
+      <div class="wl-row">
+        <span class="sym">${w.fullSymbol}</span>
+        <span style="flex:1;font-size:11px;color:var(--muted)">${w.name} — ${w.yieldPct.toFixed(2)}%</span>
+        <span class="field-label" style="margin:0">weight</span>
+        <input type="number" value="${w.weight}" min="0" step="0.1" onchange="updateWeight('${w.fullSymbol}', this.value)">
+        <button class="btn btn-red" onclick="removeFromWatchlist('${w.fullSymbol}')">✕</button>
+      </div>`).join('');
+  }
+  function updateWeight(sym, val){
+    const w = watchlist.find(x=>x.fullSymbol===sym);
+    if(w) w.weight = parseFloat(val)||0;
+  }
+
+  function computePortfolio(){
+    if(!watchlist.length) return;
+    const totalWeight = watchlist.reduce((s,w)=>s+w.weight,0) || 1;
+    const weightedYield = watchlist.reduce((s,w)=>s+w.weight*w.yieldPct,0)/totalWeight;
+    const simpleAvg = watchlist.reduce((s,w)=>s+w.yieldPct,0)/watchlist.length;
+    const highest = watchlist.slice().sort((a,b)=>b.yieldPct-a.yieldPct)[0];
+    const lowest = watchlist.slice().sort((a,b)=>a.yieldPct-b.yieldPct)[0];
+
+    document.getElementById('portfolioResult').style.display='block';
+    document.getElementById('portfolioStats').innerHTML = `
+      <div class="stat-box"><div class="lbl">Positions</div><div class="val">${watchlist.length}</div></div>
+      <div class="stat-box"><div class="lbl">Weighted Yield</div><div class="val up">${weightedYield.toFixed(2)}%</div></div>
+      <div class="stat-box"><div class="lbl">Simple Average</div><div class="val">${simpleAvg.toFixed(2)}%</div></div>
+      <div class="stat-box"><div class="lbl">Highest / Lowest</div><div class="val" style="font-size:12px">${highest.fullSymbol} ${highest.yieldPct.toFixed(1)}% / ${lowest.fullSymbol} ${lowest.yieldPct.toFixed(1)}%</div></div>
+    `;
+
+    // Seasonality: for every payment, its share of THAT symbol's total for THAT year
+    // (currency-neutral ratio), averaged per calendar month across the whole watchlist.
+    const monthBuckets = Array.from({length:12},()=>[]);
+    watchlist.forEach(w=>{
+      const hist = historyBySymbol.get(w.fullSymbol) || [];
+      const byYear = {};
+      hist.forEach(h=>{ const y=new Date(h.date).getFullYear(); if(!y) return; byYear[y]=(byYear[y]||0)+h.value; });
+      hist.forEach(h=>{
+        const d = new Date(h.date); const y = d.getFullYear(); const mo = d.getMonth();
+        const yearTotal = byYear[y];
+        if(yearTotal>0) monthBuckets[mo].push(h.value/yearTotal);
+      });
+    });
+    const monthAvg = monthBuckets.map(arr=>arr.length ? arr.reduce((s,v)=>s+v,0)/arr.length*100 : 0);
+
+    document.getElementById('seasonalityResult').style.display='block';
+    renderSeasonChart(monthAvg);
+  }
+
+  let seasonChartInstance=null;
+  function renderSeasonChart(monthAvg){
+    const ctx = document.getElementById('seasonChart').getContext('2d');
+    if(seasonChartInstance) seasonChartInstance.destroy();
+    const labels = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+    seasonChartInstance = new Chart(ctx, {
+      type:'bar',
+      data:{ labels, datasets:[{ label:'Ø Anteil an Jahresausschüttung', data: monthAvg, backgroundColor:'rgba(240,192,64,0.7)', borderColor:'#f0c040', borderWidth:1 }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>c.parsed.y.toFixed(1)+"% of that stock's yearly payout, on average" } } },
+        scales:{ x:{ ticks:{ color:'#7d92a8', font:{family:'Space Mono',size:10} }, grid:{ display:false } },
+                 y:{ ticks:{ color:'#7d92a8', font:{family:'Space Mono',size:9}, callback:v=>v+'%' }, grid:{ color:'rgba(125,146,168,0.15)' } } }
+      }
+    });
+  }
+
+  // ── SECTION B: SINGLE-STOCK DEEP DIVE ──
+  let currentListB = [];
+  async function onExchangeChangeB(){
+    const ex = document.getElementById('exSelectB').value;
+    document.getElementById('searchB').value='';
+    if(!ex){ currentListB=[]; renderPickerB(); return; }
+    await loadCache();
+    currentListB = (summaryByExchange.get(ex)||[]).slice().sort((a,b)=>b.yieldPct-a.yieldPct);
+    renderPickerB();
+  }
+  function renderPickerB(){
+    const q = document.getElementById('searchB').value.toLowerCase().trim();
+    const list = document.getElementById('pickerListB');
+    const rows = currentListB.filter(r=>!q || r.fullSymbol.toLowerCase().includes(q) || r.name.toLowerCase().includes(q)).slice(0,200);
+    list.innerHTML = rows.length ? rows.map(r=>`<div class="picker-item" onclick="selectSingle('${r.fullSymbol}')"><span class="sym">${r.fullSymbol}</span><span>${r.yieldPct.toFixed(2)}% — ${r.name}</span></div>`).join('') : '<div class="wl-empty">No matches.</div>';
+  }
+
+  function fmt(n){ const v=parseFloat(n); return isNaN(v)?'—':(v<0.01?v.toFixed(6):v.toFixed(2)); }
+
+  async function selectSingle(fullSymbol){
+    await loadCache();
+    const summaryRow = [...summaryByExchange.values()].flat().find(r=>r.fullSymbol===fullSymbol);
+    const history = (historyBySymbol.get(fullSymbol)||[]).slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const priced = history.filter(h=>h.pctOfPrice!=null && h.price>0);
+    if(!summaryRow || !priced.length){
+      document.getElementById('singleResult').innerHTML = '<div class="panel-block wl-empty">No priced history cached for this symbol yet.</div>';
+      return;
+    }
+
+    // Best 3 historical entry points
+    const best3 = priced.slice().sort((a,b)=>b.pctOfPrice-a.pctOfPrice).slice(0,3);
+
+    // Current yield vs all-time min/max (per-payment yield series)
+    const allYields = priced.map(h=>h.pctOfPrice);
+    const yMin = Math.min(...allYields), yMax = Math.max(...allYields);
+    const latest = priced[priced.length-1];
+
+    document.getElementById('singleResult').innerHTML = `
+      <div class="panel-block">
+        <h3>${fullSymbol} — ${summaryRow.name}</h3>
+        <div class="stat-grid">
+          <div class="stat-box"><div class="lbl">Trailing Yield</div><div class="val up">${summaryRow.yieldPct.toFixed(2)}%</div></div>
+          <div class="stat-box"><div class="lbl">Current Price</div><div class="val">${fmt(summaryRow.price)}</div></div>
+          <div class="stat-box"><div class="lbl">Latest Payment Yield</div><div class="val">${latest.pctOfPrice.toFixed(2)}%</div></div>
+          <div class="stat-box"><div class="lbl">All-Time Range</div><div class="val" style="font-size:13px">${yMin.toFixed(2)}% – ${yMax.toFixed(2)}%</div></div>
+        </div>
+        <p class="note">"All-Time Range" ist die Spanne der Einzelzahlungs-Rendite über die gesamte gecachte Historie dieser Aktie. Die letzte Zahlung liegt bei ${latest.pctOfPrice.toFixed(2)}% — das sagt dir, ob du gerade eher am günstigen oder teuren Ende der eigenen Geschichte dieser Aktie stehst.</p>
+      </div>
+
+      <div class="panel-block">
+        <h3>Beste historische Einstiegspunkte (Top 3)</h3>
+        <table>
+          <thead><tr><th>#</th><th>Datum</th><th>Kurs</th><th>Zahlung</th><th>Rendite</th></tr></thead>
+          <tbody>${best3.map((h,i)=>`<tr><td>${i+1}</td><td>${h.date}</td><td>${fmt(h.price)}</td><td>${fmt(h.value)} ${h.currency}</td><td style="color:var(--green);font-weight:700">${h.pctOfPrice.toFixed(2)}%</td></tr>`).join('')}</tbody>
+        </table>
+        <p class="note">Die drei Zahltage, an denen diese Aktie relativ zu ihrem Kurs am meisten ausgeschüttet hat — die historisch "günstigsten" Einstiegsmomente gemessen an der Dividende.</p>
+      </div>
+
+      <div class="panel-block">
+        <h3>DRIP-Reinvestitions-Simulator</h3>
+        <div class="row">
+          <div><span class="field-label">Startdatum (echter Kurs)</span>
+            <select id="dripDateSelect">${priced.map(h=>`<option value="${h.date}">${h.date} — ${fmt(h.price)}</option>`).join('')}</select>
+          </div>
+          <div><span class="field-label">Startkapital (${latest.currency||''})</span><input type="number" id="dripAmount" value="10000" min="1"></div>
+          <button class="btn" onclick="runDrip('${fullSymbol}')">SIMULIEREN</button>
+        </div>
+        <div class="stat-grid" id="dripStats"></div>
+        <div class="chart-wrap" id="dripChartWrap" style="display:none"><canvas id="dripChart"></canvas></div>
+        <p class="note">Jede Dividende wird zum echten, gecachten Kurs am jeweiligen Zahltag sofort in weitere Anteile reinvestiert (Bruchteilsanteile erlaubt, wie bei den meisten modernen Brokern). Vergleich gegen "ohne Reinvestition" zeigt den reinen Zinseszins-Effekt.</p>
+      </div>
+    `;
+  }
+
+  let dripChartInstance=null;
+  function runDrip(fullSymbol){
+    const summaryRow = [...summaryByExchange.values()].flat().find(r=>r.fullSymbol===fullSymbol);
+    const history = (historyBySymbol.get(fullSymbol)||[]).slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const priced = history.filter(h=>h.pctOfPrice!=null && h.price>0);
+    const startDate = document.getElementById('dripDateSelect').value;
+    const startAmount = parseFloat(document.getElementById('dripAmount').value)||0;
+    const startIdx = priced.findIndex(h=>h.date===startDate);
+    if(startIdx===-1 || startAmount<=0) return;
+
+    const startPrice = priced[startIdx].price;
+    let shares = startAmount/startPrice;
+    let sharesNoDrip = shares;
+    let cashNoDrip = 0;
+    const track = [{date:startDate, shares, value:shares*startPrice}];
+
+    for(let i=startIdx+1;i<priced.length;i++){
+      const h = priced[i];
+      const addedShares = (shares*h.value)/h.price;
+      shares += addedShares;
+      cashNoDrip += sharesNoDrip*h.value;
+      track.push({date:h.date, shares, value:shares*h.price});
+    }
+
+    const currentPrice = summaryRow.price || priced[priced.length-1].price;
+    const finalValueDrip = shares*currentPrice;
+    const finalValueNoDrip = sharesNoDrip*currentPrice + cashNoDrip;
+    const totalReturnDrip = ((finalValueDrip-startAmount)/startAmount*100);
+    const totalReturnNoDrip = ((finalValueNoDrip-startAmount)/startAmount*100);
+
+    document.getElementById('dripStats').innerHTML = `
+      <div class="stat-box"><div class="lbl">Endkapital MIT DRIP</div><div class="val up">${finalValueDrip.toFixed(2)}</div></div>
+      <div class="stat-box"><div class="lbl">Endkapital OHNE DRIP</div><div class="val">${finalValueNoDrip.toFixed(2)}</div></div>
+      <div class="stat-box"><div class="lbl">Gesamtrendite MIT DRIP</div><div class="val up">${totalReturnDrip.toFixed(1)}%</div></div>
+      <div class="stat-box"><div class="lbl">Gesamtrendite OHNE DRIP</div><div class="val">${totalReturnNoDrip.toFixed(1)}%</div></div>
+    `;
+    document.getElementById('dripChartWrap').style.display='block';
+    const ctx = document.getElementById('dripChart').getContext('2d');
+    if(dripChartInstance) dripChartInstance.destroy();
+    dripChartInstance = new Chart(ctx, {
+      type:'line',
+      data:{ labels: track.map(t=>t.date), datasets:[
+        { label:'Depotwert mit Reinvestition', data: track.map(t=>t.value), borderColor:'#00ff88', backgroundColor:'rgba(0,255,136,0.15)', fill:true, pointRadius:3, tension:0.15 }
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:true, position:'bottom', labels:{ color:'#7d92a8', font:{family:'Space Mono',size:9} } } },
+        scales:{ x:{ ticks:{ color:'#7d92a8', font:{family:'Space Mono',size:8}, maxTicksLimit:8, maxRotation:0 }, grid:{ display:false } },
+                 y:{ ticks:{ color:'#7d92a8', font:{family:'Space Mono',size:9} }, grid:{ color:'rgba(125,146,168,0.15)' } } }
+      }
+    });
+  }
+
+  buildExchangeSelect('exSelectA');
+  buildExchangeSelect('exSelectB');
+</script>
+</body>
+</html>
