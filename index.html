@@ -338,7 +338,17 @@
     // Implausible single points (>50% implied yield) excluded -- otherwise a
     // single stale/corrupt price would always "win" the Best-3-entry-points
     // ranking below and fake the All-Time-Range max.
-    const priced = history.filter(h=>h.pctOfPrice!=null && h.price>0 && h.pctOfPrice<=50);
+    let priced = history.filter(h=>h.pctOfPrice!=null && h.price>0 && h.pctOfPrice<=50);
+    // Second, independent artifact class: an isolated price SPIKE/DIP vs.
+    // both chronological neighbors produces a normal-looking pctOfPrice
+    // (so the filter above misses it) but would still fake the
+    // All-Time-Range min/max below.
+    priced = priced.filter((h,i,arr)=>{
+      if(i===0 || i===arr.length-1) return true;
+      const prev=arr[i-1].price, cur=h.price, next=arr[i+1].price;
+      if(!(prev>0) || !(next>0)) return true;
+      return !((cur>prev*5 && cur>next*5) || (cur<prev/5 && cur<next/5));
+    });
     if(!summaryRow || !priced.length){
       document.getElementById('singleResult').innerHTML = '<div class="panel-block wl-empty">No priced history cached for this symbol yet.</div>';
       return;
@@ -399,6 +409,25 @@
     const startIdx = priced.findIndex(h=>h.date===startDate);
     if(startIdx===-1 || startAmount<=0) return;
 
+    // Guard: a stale/near-zero cached price (>50% implied yield) OR an
+    // isolated price spike/dip vs. both chronological neighbors (normal
+    // yield, but inconsistent with its own neighbors -- e.g. EWQ.MX showing
+    // 267 vs. ~25 on both sides) would silently corrupt the DRIP reinvestment
+    // math. Checked across the whole series, not just from the chosen start
+    // date, since any such point anywhere in the loop poisons the result.
+    const priceUnreliable = priced.some((h,i,arr)=>{
+      if(h.pctOfPrice>50) return true;
+      if(i===0 || i===arr.length-1) return false;
+      const prev=arr[i-1].price, cur=h.price, next=arr[i+1].price;
+      if(!(prev>0) || !(next>0)) return false;
+      return (cur>prev*5 && cur>next*5) || (cur<prev/5 && cur<next/5);
+    });
+    if(priceUnreliable){
+      document.getElementById('dripStats').innerHTML = `<div class="stat-box" style="grid-column:1/-1"><div class="lbl" style="color:var(--down)">Unzuverlässige Kursdaten</div><div class="val" style="font-size:13px;font-weight:400">Mindestens eine historische Zahlung zeigt eine unplausible Rendite oder einen isolierten Kurs-Ausreißer gegenüber den Nachbar-Zahlungen — stale/falscher Kurs in der Quelle. DRIP-Endwert würde hier eine falsche Zahl liefern, daher nicht berechnet.</div></div>`;
+      document.getElementById('dripChartWrap').style.display='none';
+      return;
+    }
+
     const startPrice = priced[startIdx].price;
     let shares = startAmount/startPrice;
     let sharesNoDrip = shares;
@@ -414,16 +443,6 @@
     }
 
     const currentPrice = summaryRow.price || priced[priced.length-1].price;
-    // Guard: a stale/near-zero cached or historical price (same root cause as
-    // the CachedYieldPct outlier bug) would silently produce a nonsense DRIP
-    // result. Any single payment with an implausible pctOfPrice (>50%) means
-    // this symbol's pricing can't be trusted for a final-value calculation.
-    const priceUnreliable = priced.some(h=>h.pctOfPrice!=null && h.pctOfPrice>50);
-    if(priceUnreliable){
-      document.getElementById('dripStats').innerHTML = `<div class="stat-box" style="grid-column:1/-1"><div class="lbl" style="color:var(--down)">Unzuverlässige Kursdaten</div><div class="val" style="font-size:13px;font-weight:400">Mindestens eine historische Zahlung zeigt eine unplausible Rendite (&gt;50%) — stale/Near-Null-Kurs in der Quelle. DRIP-Endwert würde hier eine falsche Zahl liefern, daher nicht berechnet.</div></div>`;
-      document.getElementById('dripChartWrap').style.display='none';
-      return;
-    }
     const finalValueDrip = shares*currentPrice;
     const finalValueNoDrip = sharesNoDrip*currentPrice + cashNoDrip;
     const totalReturnDrip = ((finalValueDrip-startAmount)/startAmount*100);
