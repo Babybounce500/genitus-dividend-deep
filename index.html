@@ -411,6 +411,16 @@
     }
 
     const currentPrice = summaryRow.price || priced[priced.length-1].price;
+    // Guard: a stale/near-zero cached or historical price (same root cause as
+    // the CachedYieldPct outlier bug) would silently produce a nonsense DRIP
+    // result. Any single payment with an implausible pctOfPrice (>50%) means
+    // this symbol's pricing can't be trusted for a final-value calculation.
+    const priceUnreliable = priced.some(h=>h.pctOfPrice!=null && h.pctOfPrice>50);
+    if(priceUnreliable){
+      document.getElementById('dripStats').innerHTML = `<div class="stat-box" style="grid-column:1/-1"><div class="lbl" style="color:var(--down)">Unzuverlässige Kursdaten</div><div class="val" style="font-size:13px;font-weight:400">Mindestens eine historische Zahlung zeigt eine unplausible Rendite (&gt;50%) — stale/Near-Null-Kurs in der Quelle. DRIP-Endwert würde hier eine falsche Zahl liefern, daher nicht berechnet.</div></div>`;
+      document.getElementById('dripChartWrap').style.display='none';
+      return;
+    }
     const finalValueDrip = shares*currentPrice;
     const finalValueNoDrip = sharesNoDrip*currentPrice + cashNoDrip;
     const totalReturnDrip = ((finalValueDrip-startAmount)/startAmount*100);
