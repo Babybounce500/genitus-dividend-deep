@@ -331,6 +331,25 @@
 
   function fmt(n){ const v=parseFloat(n); return isNaN(v)?'—':(v<0.01?v.toFixed(6):v.toFixed(2)); }
 
+  // A real stock split (e.g. WMT 3:1 in 02/2024, NVDA 10:1 in 06/2024) is not
+  // retroactively adjusted in the cached PriceOnDate history -- it shows up
+  // as a sustained, multi-period price-level shift close to a round ratio
+  // (2x, 3x, 10x, ...), unlike the isolated single-point spike/dip filtered
+  // elsewhere in this file.
+  function isSplitLike(p1, p2){
+    // No round-ratio matching: validated against real WMT data (3:1 split,
+    // 23.02.2024) that the ratio between two quarterly-spaced dividend dates
+    // is 2.50x, not a clean 3.0x (price also drifted organically in between)
+    // -- a tight "close to 2/3/4/5/10/20/50x" check misses this. A >=1.8x
+    // level shift between two dividend-payment-dated prices (usually ~3
+    // months apart) for an established payer is essentially always a split
+    // or a data fault, never organic -- safer to break the series here than
+    // silently bridge a possible fabrication.
+    if(!(p1>0) || !(p2>0)) return false;
+    const r = p1>p2 ? p1/p2 : p2/p1;
+    return r >= 1.8;
+  }
+
   async function selectSingle(fullSymbol){
     await loadCache();
     const summaryRow = [...summaryByExchange.values()].flat().find(r=>r.fullSymbol===fullSymbol);
@@ -349,6 +368,16 @@
       if(!(prev>0) || !(next>0)) return true;
       return !((cur>prev*5 && cur>next*5) || (cur<prev/5 && cur<next/5));
     });
+    // Third artifact class: a real, unadjusted stock split (e.g. WMT 3:1 in
+    // 02/2024) is not an isolated outlier -- both sides look internally
+    // consistent -- but it mechanically triples PctOfPrice from that date on,
+    // which would fake a "Best entry point" or the All-Time-Range max below.
+    // Keep only the run since the most recent detected split.
+    let splitStart = 0;
+    for(let i=1;i<priced.length;i++){
+      if(isSplitLike(priced[i-1].price, priced[i].price)) splitStart = i;
+    }
+    priced = priced.slice(splitStart);
     if(!summaryRow || !priced.length){
       document.getElementById('singleResult').innerHTML = '<div class="panel-block wl-empty">No priced history cached for this symbol yet.</div>';
       return;
@@ -409,21 +438,25 @@
     const startIdx = priced.findIndex(h=>h.date===startDate);
     if(startIdx===-1 || startAmount<=0) return;
 
-    // Guard: a stale/near-zero cached price (>50% implied yield) OR an
-    // isolated price spike/dip vs. both chronological neighbors (normal
-    // yield, but inconsistent with its own neighbors -- e.g. EWQ.MX showing
-    // 267 vs. ~25 on both sides) would silently corrupt the DRIP reinvestment
-    // math. Checked across the whole series, not just from the chosen start
-    // date, since any such point anywhere in the loop poisons the result.
+    // Guard: a stale/near-zero cached price (>50% implied yield), an isolated
+    // price spike/dip vs. both chronological neighbors (normal yield, but
+    // inconsistent with its own neighbors -- e.g. EWQ.MX showing 267 vs. ~25
+    // on both sides), OR a real, unadjusted stock split between two payments
+    // (e.g. WMT 3:1 in 02/2024 -- PriceOnDate isn't retroactively adjusted,
+    // so the running "shares" count silently stops tracking real value at
+    // that date) would each corrupt the DRIP reinvestment math. Checked
+    // across the whole series, not just from the chosen start date, since
+    // any such point anywhere in the loop poisons the result.
     const priceUnreliable = priced.some((h,i,arr)=>{
       if(h.pctOfPrice>50) return true;
       if(i===0 || i===arr.length-1) return false;
       const prev=arr[i-1].price, cur=h.price, next=arr[i+1].price;
       if(!(prev>0) || !(next>0)) return false;
-      return (cur>prev*5 && cur>next*5) || (cur<prev/5 && cur<next/5);
+      if((cur>prev*5 && cur>next*5) || (cur<prev/5 && cur<next/5)) return true;
+      return isSplitLike(prev, cur);
     });
     if(priceUnreliable){
-      document.getElementById('dripStats').innerHTML = `<div class="stat-box" style="grid-column:1/-1"><div class="lbl" style="color:var(--down)">Unzuverlässige Kursdaten</div><div class="val" style="font-size:13px;font-weight:400">Mindestens eine historische Zahlung zeigt eine unplausible Rendite oder einen isolierten Kurs-Ausreißer gegenüber den Nachbar-Zahlungen — stale/falscher Kurs in der Quelle. DRIP-Endwert würde hier eine falsche Zahl liefern, daher nicht berechnet.</div></div>`;
+      document.getElementById('dripStats').innerHTML = `<div class="stat-box" style="grid-column:1/-1"><div class="lbl" style="color:var(--down)">Unzuverlässige Kursdaten</div><div class="val" style="font-size:13px;font-weight:400">Mindestens eine historische Zahlung zeigt eine unplausible Rendite, einen isolierten Kurs-Ausreißer oder einen unbereinigten Aktiensplit gegenüber den Nachbar-Zahlungen — stale/falscher Kurs oder Split-Artefakt in der Quelle. DRIP-Endwert würde hier eine falsche Zahl liefern, daher nicht berechnet.</div></div>`;
       document.getElementById('dripChartWrap').style.display='none';
       return;
     }
